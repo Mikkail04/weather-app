@@ -1,0 +1,105 @@
+/* Page Styling */
+body {
+    font-family: Arial;
+    background: linear-gradient(to right, #87CEEB, #4682B4, #0000FF);
+
+    color: white;
+    text-align: center;
+    margin-top: 100px;
+}
+
+.box {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 30px;
+    border-radius: 15px;
+    display: inline-block;
+
+    /* Extra styling for mobile compatibility */
+    max-width: 400px;
+    width: 90%;
+    margin: auto;
+}
+
+/* Better scaling across devices to account for mobile */
+h1 {
+    font-size: 2.5rem;
+}
+h2 {
+    font-size: 2.5rem;
+}
+h3 {
+    font-size: 2.5rem;
+}
+
+input {
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+}
+
+button {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+}
+
+button:hover{
+    background-color: #D3D3D3;
+    font-size: 14px;
+    border: 1px solid black;
+}
+
+/* Container holding all forecast cards */
+/* .forecast-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+} */
+
+/* Updated container for mobile compatibility */
+.forecast-container {
+    display: flex;
+    gap: 10px;
+    /* Horizontal scrolling */
+    overflow-x: auto;   
+    padding-bottom: 10px;
+}
+
+/* Each forecast day card */
+.forecast-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 3px solid #B1A2CA;
+    padding: 12px;
+    border-radius: 12px;
+    min-width: 100px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+/* Date text */
+.forecast-date {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* Weather icon */
+.forecast-icon {
+    font-size: 28px;
+    margin: 8px 0;
+}
+
+/* Description */
+.forecast-desc {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+/* Temperature line */
+.forecast-temps {
+    font-weight: bold;
+    margin-top: 6px;
+}

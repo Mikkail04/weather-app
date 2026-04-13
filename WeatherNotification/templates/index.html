@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Weather App</title>
+
+    <meta http-equiv="refresh" content="120">
+</head>
+<body>
+
+<div class="box">
+
+    <h1>🌤 Weather App</h1>
+
+    <!-- Search for a city -->
+    <form method="GET">
+        <input type="text" name="city" placeholder="Enter city">
+        <button type="submit">Search</button>
+    </form>
+
+    <br>
+
+    <!-- Get user location -->
+    <button onclick="getLocation()">Use My Location</button>
+
+    <br><br>
+
+    {% if error %}
+        <p>{{ error }}</p>
+    {% else %}
+        <h2>{{ city }}</h2>
+        <h2>{{ icon }}</h2>
+        <p>{{ description }}</p>
+        <h3>{{ temp_f }}°F / {{ temp_c }}°C</h3>
+        <p>Wind: {{ wind }} km/h</p>
+
+        <h2>7-Day Forecast</h2>
+
+        <div class="forecast-container">
+            {% for day in forecast %}
+                <div class="forecast-card">
+                    <p class="forecast-date">{{ day.date }}</p>
+                    <h2 class="forecast-icon">{{ day.icon }}</h2>
+                    <p class="forecast-desc">{{ day.desc }}</p>
+                    <p class="forecast-temps"> {{ day.min }}F° / {{ day.max }}F° </p>
+                </div>
+            {% endfor %}
+        </div>
+
+    {% endif %}
+
+
+</div>
+
+<script>
+function getLocation() {
+    navigator.geolocation.getCurrentPosition(position => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        window.location.href = `/coords?lat=${lat}&lon=${lon}`;
+    });
+}
+</script>
+
+</body>
+</html>
