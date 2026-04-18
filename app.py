@@ -4,36 +4,37 @@ import os
 
 app = Flask(__name__)
 
+# ---------------- WEATHER CODE HELPERS ----------------
 def get_weather_icon_and_desc(code):
     if code == 0:
         return "☀️", "Clear sky"
-    elif code in [1]:
+    elif code == 1:
         return "🌤", "Mainly clear"
-    elif code in [2]:
+    elif code == 2:
         return "⛅", "Partly cloudy"
-    elif code in [3]:
+    elif code == 3:
         return "☁️", "Overcast"
     elif code in [45, 48]:
         return "🌫", "Fog"
-    elif code in [51]:
+    elif code == 51:
         return "🌦", "Light drizzle"
-    elif code in [53]:
+    elif code == 53:
         return "🌦", "Moderate drizzle"
-    elif code in [55]:
+    elif code == 55:
         return "🌦", "Dense drizzle"
-    elif code in [61]:
+    elif code == 61:
         return "🌧", "Slight rain"
-    elif code in [63]:
+    elif code == 63:
         return "🌧", "Moderate rain"
-    elif code in [65]:
+    elif code == 65:
         return "🌧", "Heavy rain"
-    elif code in [71]:
+    elif code == 71:
         return "❄️", "Slight snow"
-    elif code in [73]:
+    elif code == 73:
         return "❄️", "Moderate snow"
-    elif code in [75]:
+    elif code == 75:
         return "❄️", "Heavy snow"
-    elif code in [95]:
+    elif code == 95:
         return "⛈", "Thunderstorm"
     else:
         return "🌍", "Unknown conditions"
@@ -44,6 +45,7 @@ def get_weather_icon_and_desc(code):
 def home():
     city = request.args.get("city", "Brooklyn")
 
+    # ---- GEOCODING ----
     geo_res = requests.get(
         "https://geocoding-api.open-meteo.com/v1/search",
         params={"name": city, "count": 1}
@@ -55,31 +57,34 @@ def home():
     lat = geo_res["results"][0]["latitude"]
     lon = geo_res["results"][0]["longitude"]
 
+    # ---- WEATHER API (NEW FORMAT) ----
     weather_res = requests.get(
         "https://api.open-meteo.com/v1/forecast",
         params={
             "latitude": lat,
             "longitude": lon,
-            "current_weather": True,
+            "current": "temperature_2m,wind_speed_10m,weathercode",
             "daily": "weathercode,temperature_2m_max,temperature_2m_min",
             "timezone": "auto"
         }
     ).json()
 
-    # safety check
-    if "current_weather" not in weather_res:
+    # ---- SAFETY CHECK ----
+    current = weather_res.get("current")
+
+    if not current:
+        print(weather_res)
         return render_template("index.html", error="Weather data unavailable")
 
-    current = weather_res["current_weather"]
-
-    temp_c = current["temperature"]
-    wind = current["windspeed"]
-    weathercode = current["weathercode"]
+    # ---- CURRENT WEATHER ----
+    temp_c = current["temperature_2m"]
+    wind = current["wind_speed_10m"]
+    weathercode = current.get("weathercode", 0)
 
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
 
-    # forecast
+    # ---- FORECAST ----
     forecast = []
     if "daily" in weather_res:
         days = weather_res["daily"]["time"]
@@ -110,7 +115,7 @@ def home():
     )
 
 
-# ---------------- COORDS ----------------
+# ---------------- COORDS PAGE ----------------
 @app.route("/coords")
 def coords():
     lat = request.args.get("lat", type=float)
@@ -124,20 +129,20 @@ def coords():
         params={
             "latitude": lat,
             "longitude": lon,
-            "current_weather": True,
+            "current": "temperature_2m,wind_speed_10m,weathercode",
             "daily": "weathercode,temperature_2m_max,temperature_2m_min",
             "timezone": "auto"
         }
     ).json()
 
-    if "current_weather" not in weather_res:
+    current = weather_res.get("current")
+
+    if not current:
         return render_template("index.html", error="Weather data unavailable")
 
-    current = weather_res["current_weather"]
-
-    temp_c = current["temperature"]
-    wind = current["windspeed"]
-    weathercode = current["weathercode"]
+    temp_c = current["temperature_2m"]
+    wind = current["wind_speed_10m"]
+    weathercode = current.get("weathercode", 0)
 
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
@@ -154,10 +159,10 @@ def coords():
 
             forecast.append({
                 "date": days[i],
-                "max": round((max_t[i] * 9/5) + 32, 1),
-                "min": round((min_t[i] * 9/5) + 32, 1),
                 "icon": icon_f,
-                "desc": desc_f
+                "desc": desc_f,
+                "max": round((max_t[i] * 9/5) + 32, 1),
+                "min": round((min_t[i] * 9/5) + 32, 1)
             })
 
     return render_template(
@@ -172,5 +177,6 @@ def coords():
     )
 
 
+# ---------------- RUN APP ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
