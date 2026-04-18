@@ -63,14 +63,14 @@ def home():
         params={
             "latitude": lat,
             "longitude": lon,
-            "current": "temperature_2m,windspeed_10m,weathercode",
+            "current_weather": True,
             "daily": "weathercode,temperature_2m_max,temperature_2m_min",
             "timezone": "auto"
         }
     ).json()
 
     # ✅ FIXED SAFETY CHECK
-    if "current" not in weather_res:
+    if "current_weather" not in weather_res:
         return render_template("index.html", error="Weather data unavailable")
 
     # Forecast
@@ -97,9 +97,9 @@ def home():
             })
 
     # ✅ FIXED DATA ACCESS
-    temp_c = weather_res["current"]["temperature_2m"]
-    wind = weather_res["current"]["windspeed_10m"]
-    weathercode = weather_res["current"]["weathercode"]
+    temp_c = weather_res["current_weather"]["temperature"]
+    wind = weather_res["current_weather"]["windspeed"]
+    weathercode = weather_res["current_weather"]["weathercode"]
 
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
@@ -127,7 +127,7 @@ def coords():
         params={
             "latitude": lat,
             "longitude": lon,
-            "current": "temperature_2m,windspeed_10m,weathercode",
+            "current_weather": True,
             "daily": "weathercode,temperature_2m_max,temperature_2m_min",
             "timezone": "auto"
         }
@@ -159,9 +159,9 @@ def coords():
                 "desc": desc
             })
 
-    temp_c = weather_res["current"]["temperature_2m"]
-    wind = weather_res["current"]["windspeed_10m"]
-    weathercode = weather_res["current"]["weathercode"]
+    temp_c = weather_res["current_weather"]["temperature_2m"]
+    wind = weather_res["current_weather"]["windspeed"]
+    weathercode = weather_res["current_weather"]["weathercode"]
 
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
