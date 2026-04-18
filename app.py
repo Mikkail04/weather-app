@@ -43,45 +43,37 @@ def get_weather_icon_and_desc(code):
     else:
         return "🌍", "Unknown conditions"
 
-# Define route for homepage ("/")
+
 @app.route("/")
 def home():
-    # Get 'city' from URL (e.g. ?city=London), default to "Brooklyn" if not provided
     city = request.args.get("city", "Brooklyn")
 
-    # URL for Open-Meteo geocoding API (converts city name → coordinates)
     geo_url = "https://geocoding-api.open-meteo.com/v1/search"
-
-    # Send GET request with city name, limit results to 1, convert response to JSON
     geo_res = requests.get(geo_url, params={"name": city, "count": 1}).json()
 
-    # If API didn't return results, show error message on page
     if "results" not in geo_res:
         return render_template("index.html", error="City not found")
 
-    # Extract latitude from API response
     lat = geo_res["results"][0]["latitude"]
-
-    # Extract longitude from API response
     lon = geo_res["results"][0]["longitude"]
 
-    # Send request to weather API using coordinates
-    weather_res = requests.get("https://api.open-meteo.com/v1/forecast",
+    # ✅ FIXED API CALL
+    weather_res = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
         params={
-            "latitude": lat,              # latitude of city
-            "longitude": lon,             # longitude of city
-            "current_weather": True,      # request current weather only
+            "latitude": lat,
+            "longitude": lon,
+            "current": "temperature_2m,windspeed_10m,weathercode",
             "daily": "weathercode,temperature_2m_max,temperature_2m_min",
             "timezone": "auto"
         }
-    ).json()  # convert response to JSON
-    
-    if "current_weather" not in weather_res:
+    ).json()
+
+    # ✅ FIXED SAFETY CHECK
+    if "current" not in weather_res:
         return render_template("index.html", error="Weather data unavailable")
-    
-    print(weather_res)
-    
-    # Get forecast information
+
+    # Forecast
     forecast = []
 
     if "daily" in weather_res:
@@ -93,11 +85,8 @@ def home():
         for i in range(len(forecast_days)):
             icon, desc = get_weather_icon_and_desc(forecast_codes[i])
 
-            max_c = forecast_max[i]
-            min_c = forecast_min[i]
-
-            max_f = (max_c * 9/5) + 32
-            min_f = (min_c * 9/5) + 32
+            max_f = (forecast_max[i] * 9/5) + 32
+            min_f = (forecast_min[i] * 9/5) + 32
 
             forecast.append({
                 "date": forecast_days[i],
@@ -107,98 +96,17 @@ def home():
                 "min": round(min_f, 1)
             })
 
-    # Get temperature in Celsius from response
-    temp_c = weather_res["current_weather"]["temperature"]
-    
-    # Get an icon and description that represents the weather
-    weathercode = weather_res["current_weather"]["weathercode"]
-    icon, description = get_weather_icon_and_desc(weathercode)
+    # ✅ FIXED DATA ACCESS
+    temp_c = weather_res["current"]["temperature_2m"]
+    wind = weather_res["current"]["windspeed_10m"]
+    weathercode = weather_res["current"]["weathercode"]
 
-    # Convert Celsius to Fahrenheit
+    icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
 
-    # Get wind speed from response
-    wind = weather_res["current_weather"]["windspeed"]
-
-    # Render HTML template and pass values to it
     return render_template(
         "index.html",
-        city=city,                    # city name
-        temp_c=temp_c,                # temperature in Celsius
-        temp_f=round(temp_f, 1),      # temperature in Fahrenheit (rounded)
-        wind=wind,                    # wind speed
-        icon=icon,                    # weather icon
-        description=description,      # description
-        forecast=forecast
-    )
-
-# Only run the app if this file is executed directly (not imported)
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-    
-
-# Route for handling GPS coordinates from browser
-@app.route("/coords")
-def coords():
-    # Get latitude from URL (?lat=...)
-    lat = request.args.get("lat")
-
-    # Get longitude from URL (?lon=...)
-    lon = request.args.get("lon")
-
-    # Call weather API using provided coordinates
-    weather_res = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params={
-            "latitude": lat,           # user's latitude
-            "longitude": lon,          # user's longitude
-            "current_weather": True,  # request current weather
-            "daily": "weathercode,temperature_2m_max,temperature_2m_min",
-            "timezone": "auto"
-        }
-    ).json()  # convert response to JSON
-    
-    # Get forecast information
-    forecast_days = weather_res["daily"]["time"]
-    forecast_max = weather_res["daily"]["temperature_2m_max"]
-    forecast_min = weather_res["daily"]["temperature_2m_min"]
-    forecast_codes = weather_res["daily"]["weathercode"]
-    forecast = []
-
-    for i in range(len(forecast_days)):
-        icon, desc = get_weather_icon_and_desc(forecast_codes[i])
-        max_c = forecast_max[i]
-        min_c = forecast_min[i]
-
-        # Convert to Fahrenheit
-        max_f = (max_c * 9/5) + 32
-        min_f = (min_c * 9/5) + 32
-
-        forecast.append({
-            "date": forecast_days[i],
-            "max": round(max_f, 1),
-            "min": round(min_f, 1),
-            "icon": icon,
-            "desc": desc
-        })
-
-    # Extract temperature in Celsius
-    temp_c = weather_res["current_weather"]["temperature"]
-    
-    # Get an icon and description that represents the weather
-    weathercode = weather_res["current_weather"]["weathercode"]
-    icon, description = get_weather_icon_and_desc(weathercode)
-
-    # Convert to Fahrenheit
-    temp_f = (temp_c * 9/5) + 32
-
-    # Extract wind speed
-    wind = weather_res["current_weather"]["windspeed"]
-
-    # Render same HTML but label as "Your Location"
-    return render_template(
-        "index.html",
-        city="Your Location",         # label instead of city name
+        city=city,
         temp_c=temp_c,
         temp_f=round(temp_f, 1),
         wind=wind,
@@ -206,4 +114,69 @@ def coords():
         description=description,
         forecast=forecast
     )
-    
+
+
+@app.route("/coords")
+def coords():
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+
+    # ✅ FIXED API CALL
+    weather_res = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params={
+            "latitude": lat,
+            "longitude": lon,
+            "current": "temperature_2m,windspeed_10m,weathercode",
+            "daily": "weathercode,temperature_2m_max,temperature_2m_min",
+            "timezone": "auto"
+        }
+    ).json()
+
+    # ✅ SAFETY CHECK
+    if "current" not in weather_res:
+        return render_template("index.html", error="Weather data unavailable")
+
+    forecast = []
+
+    if "daily" in weather_res:
+        forecast_days = weather_res["daily"]["time"]
+        forecast_max = weather_res["daily"]["temperature_2m_max"]
+        forecast_min = weather_res["daily"]["temperature_2m_min"]
+        forecast_codes = weather_res["daily"]["weathercode"]
+
+        for i in range(len(forecast_days)):
+            icon, desc = get_weather_icon_and_desc(forecast_codes[i])
+
+            max_f = (forecast_max[i] * 9/5) + 32
+            min_f = (forecast_min[i] * 9/5) + 32
+
+            forecast.append({
+                "date": forecast_days[i],
+                "max": round(max_f, 1),
+                "min": round(min_f, 1),
+                "icon": icon,
+                "desc": desc
+            })
+
+    temp_c = weather_res["current"]["temperature_2m"]
+    wind = weather_res["current"]["windspeed_10m"]
+    weathercode = weather_res["current"]["weathercode"]
+
+    icon, description = get_weather_icon_and_desc(weathercode)
+    temp_f = (temp_c * 9/5) + 32
+
+    return render_template(
+        "index.html",
+        city="Your Location",
+        temp_c=temp_c,
+        temp_f=round(temp_f, 1),
+        wind=wind,
+        icon=icon,
+        description=description,
+        forecast=forecast
+    )
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
