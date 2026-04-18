@@ -51,7 +51,7 @@ def home():
     geo_url = "https://geocoding-api.open-meteo.com/v1/search"
     geo_res = requests.get(geo_url, params={"name": city, "count": 1}).json()
 
-    if "results" not in geo_res:
+    if not geo_res.get("results"):
         return render_template("index.html", error="City not found")
 
     lat = geo_res["results"][0]["latitude"]
@@ -121,7 +121,6 @@ def coords():
     lat = request.args.get("lat")
     lon = request.args.get("lon")
 
-    # ✅ FIXED API CALL
     weather_res = requests.get(
         "https://api.open-meteo.com/v1/forecast",
         params={
@@ -133,12 +132,10 @@ def coords():
         }
     ).json()
 
-    # ✅ SAFETY CHECK
-    if "current" not in weather_res:
+    if "current_weather" not in weather_res:
         return render_template("index.html", error="Weather data unavailable")
 
     forecast = []
-
     if "daily" in weather_res:
         forecast_days = weather_res["daily"]["time"]
         forecast_max = weather_res["daily"]["temperature_2m_max"]
@@ -147,7 +144,6 @@ def coords():
 
         for i in range(len(forecast_days)):
             icon, desc = get_weather_icon_and_desc(forecast_codes[i])
-
             max_f = (forecast_max[i] * 9/5) + 32
             min_f = (forecast_min[i] * 9/5) + 32
 
@@ -159,7 +155,7 @@ def coords():
                 "desc": desc
             })
 
-    temp_c = weather_res["current_weather"]["temperature_2m"]
+    temp_c = weather_res["current_weather"]["temperature"]  # FIXED
     wind = weather_res["current_weather"]["windspeed"]
     weathercode = weather_res["current_weather"]["weathercode"]
 
@@ -176,6 +172,7 @@ def coords():
         description=description,
         forecast=forecast
     )
+
 
 
 if __name__ == "__main__":
