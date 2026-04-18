@@ -79,6 +79,8 @@ def home():
     if "current_weather" not in weather_res:
         return render_template("index.html", error="Weather data unavailable")
     
+    print(weather_res)
+    
     # Get forecast information
     forecast = []
 
