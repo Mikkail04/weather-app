@@ -1,14 +1,9 @@
-# Import Flask class (main app), render_template (for HTML), and request (for URL params)
 from flask import Flask, render_template, request
-
-# Import requests to make API calls
 import requests
 import os
 
-# Create the Flask app instance
 app = Flask(__name__)
 
-# Get a weather icon and description based on weather conditions
 def get_weather_icon_and_desc(code):
     if code == 0:
         return "☀️", "Clear sky"
@@ -44,12 +39,15 @@ def get_weather_icon_and_desc(code):
         return "🌍", "Unknown conditions"
 
 
+# ---------------- HOME PAGE ----------------
 @app.route("/")
 def home():
     city = request.args.get("city", "Brooklyn")
 
-    geo_url = "https://geocoding-api.open-meteo.com/v1/search"
-    geo_res = requests.get(geo_url, params={"name": city, "count": 1}).json()
+    geo_res = requests.get(
+        "https://geocoding-api.open-meteo.com/v1/search",
+        params={"name": city, "count": 1}
+    ).json()
 
     if not geo_res.get("results"):
         return render_template("index.html", error="City not found")
@@ -57,7 +55,6 @@ def home():
     lat = geo_res["results"][0]["latitude"]
     lon = geo_res["results"][0]["longitude"]
 
-    # ✅ FIXED API CALL
     weather_res = requests.get(
         "https://api.open-meteo.com/v1/forecast",
         params={
@@ -69,40 +66,37 @@ def home():
         }
     ).json()
 
-    # ✅ FIXED SAFETY CHECK
+    # safety check
     if "current_weather" not in weather_res:
         return render_template("index.html", error="Weather data unavailable")
 
-    # Forecast
-    forecast = []
+    current = weather_res["current_weather"]
 
-    if "daily" in weather_res:
-        forecast_days = weather_res["daily"]["time"]
-        forecast_max = weather_res["daily"]["temperature_2m_max"]
-        forecast_min = weather_res["daily"]["temperature_2m_min"]
-        forecast_codes = weather_res["daily"]["weathercode"]
-
-        for i in range(len(forecast_days)):
-            icon, desc = get_weather_icon_and_desc(forecast_codes[i])
-
-            max_f = (forecast_max[i] * 9/5) + 32
-            min_f = (forecast_min[i] * 9/5) + 32
-
-            forecast.append({
-                "date": forecast_days[i],
-                "icon": icon,
-                "desc": desc,
-                "max": round(max_f, 1),
-                "min": round(min_f, 1)
-            })
-
-    # ✅ FIXED DATA ACCESS
-    temp_c = weather_res["current_weather"]["temperature"]
-    wind = weather_res["current_weather"]["windspeed"]
-    weathercode = weather_res["current_weather"]["weathercode"]
+    temp_c = current["temperature"]
+    wind = current["windspeed"]
+    weathercode = current["weathercode"]
 
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
+
+    # forecast
+    forecast = []
+    if "daily" in weather_res:
+        days = weather_res["daily"]["time"]
+        max_t = weather_res["daily"]["temperature_2m_max"]
+        min_t = weather_res["daily"]["temperature_2m_min"]
+        codes = weather_res["daily"]["weathercode"]
+
+        for i in range(len(days)):
+            icon_f, desc_f = get_weather_icon_and_desc(codes[i])
+
+            forecast.append({
+                "date": days[i],
+                "icon": icon_f,
+                "desc": desc_f,
+                "max": round((max_t[i] * 9/5) + 32, 1),
+                "min": round((min_t[i] * 9/5) + 32, 1)
+            })
 
     return render_template(
         "index.html",
@@ -116,10 +110,14 @@ def home():
     )
 
 
+# ---------------- COORDS ----------------
 @app.route("/coords")
 def coords():
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+
+    if not lat or not lon:
+        return render_template("index.html", error="Location not available")
 
     weather_res = requests.get(
         "https://api.open-meteo.com/v1/forecast",
@@ -135,32 +133,32 @@ def coords():
     if "current_weather" not in weather_res:
         return render_template("index.html", error="Weather data unavailable")
 
-    forecast = []
-    if "daily" in weather_res:
-        forecast_days = weather_res["daily"]["time"]
-        forecast_max = weather_res["daily"]["temperature_2m_max"]
-        forecast_min = weather_res["daily"]["temperature_2m_min"]
-        forecast_codes = weather_res["daily"]["weathercode"]
+    current = weather_res["current_weather"]
 
-        for i in range(len(forecast_days)):
-            icon, desc = get_weather_icon_and_desc(forecast_codes[i])
-            max_f = (forecast_max[i] * 9/5) + 32
-            min_f = (forecast_min[i] * 9/5) + 32
-
-            forecast.append({
-                "date": forecast_days[i],
-                "max": round(max_f, 1),
-                "min": round(min_f, 1),
-                "icon": icon,
-                "desc": desc
-            })
-
-    temp_c = weather_res["current_weather"]["temperature"]  # FIXED
-    wind = weather_res["current_weather"]["windspeed"]
-    weathercode = weather_res["current_weather"]["weathercode"]
+    temp_c = current["temperature"]
+    wind = current["windspeed"]
+    weathercode = current["weathercode"]
 
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
+
+    forecast = []
+    if "daily" in weather_res:
+        days = weather_res["daily"]["time"]
+        max_t = weather_res["daily"]["temperature_2m_max"]
+        min_t = weather_res["daily"]["temperature_2m_min"]
+        codes = weather_res["daily"]["weathercode"]
+
+        for i in range(len(days)):
+            icon_f, desc_f = get_weather_icon_and_desc(codes[i])
+
+            forecast.append({
+                "date": days[i],
+                "max": round((max_t[i] * 9/5) + 32, 1),
+                "min": round((min_t[i] * 9/5) + 32, 1),
+                "icon": icon_f,
+                "desc": desc_f
+            })
 
     return render_template(
         "index.html",
@@ -172,7 +170,6 @@ def coords():
         description=description,
         forecast=forecast
     )
-
 
 
 if __name__ == "__main__":
