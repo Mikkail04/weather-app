@@ -76,29 +76,34 @@ def home():
         }
     ).json()  # convert response to JSON
     
+    if "current_weather" not in weather_res:
+        return render_template("index.html", error="Weather data unavailable")
+    
     # Get forecast information
-    forecast_days = weather_res["daily"]["time"]
-    forecast_max = weather_res["daily"]["temperature_2m_max"]
-    forecast_min = weather_res["daily"]["temperature_2m_min"]
-    forecast_codes = weather_res["daily"]["weathercode"]
     forecast = []
 
-    for i in range(len(forecast_days)):
-        icon, desc = get_weather_icon_and_desc(forecast_codes[i])
-        max_c = forecast_max[i]
-        min_c = forecast_min[i]
+    if "daily" in weather_res:
+        forecast_days = weather_res["daily"]["time"]
+        forecast_max = weather_res["daily"]["temperature_2m_max"]
+        forecast_min = weather_res["daily"]["temperature_2m_min"]
+        forecast_codes = weather_res["daily"]["weathercode"]
 
-        # Convert to Fahrenheit
-        max_f = (max_c * 9/5) + 32
-        min_f = (min_c * 9/5) + 32
+        for i in range(len(forecast_days)):
+            icon, desc = get_weather_icon_and_desc(forecast_codes[i])
 
-        forecast.append({
-            "date": forecast_days[i],
-            "max": round(max_f, 1),
-            "min": round(min_f, 1),
-            "icon": icon,
-            "desc": desc
-        })
+            max_c = forecast_max[i]
+            min_c = forecast_min[i]
+
+            max_f = (max_c * 9/5) + 32
+            min_f = (min_c * 9/5) + 32
+
+            forecast.append({
+                "date": forecast_days[i],
+                "icon": icon,
+                "desc": desc,
+                "max": round(max_f, 1),
+                "min": round(min_f, 1)
+            })
 
     # Get temperature in Celsius from response
     temp_c = weather_res["current_weather"]["temperature"]
