@@ -261,7 +261,8 @@ import os
 app = Flask(__name__)
 
 # Get API key from environment (Render)
-API_KEY = os.environ.get("9a31b21bbeb4f199239cc05ccf18f642")
+API_KEY = os.environ.get("API_KEY")
+print("API KEY LOADED:", bool(API_KEY))
 
 
 # ---------------- HOME ----------------
@@ -283,7 +284,7 @@ def home():
         return render_template("index.html", error="API request failed")
 
     # ❌ Error handling
-    if weather_res.get("cod") != 200:
+    if str(weather_res.get("cod")) != "200":
         return render_template("index.html", error="City not found")
 
     # ✅ Extract data
