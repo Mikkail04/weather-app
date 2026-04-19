@@ -1,3 +1,8 @@
+# Added in order to implement expiration
+from time import time
+cache = {}
+CACHE_DURATION = 600  # 10 minutes
+
 from flask import Flask, render_template, request
 import requests
 import os
@@ -57,18 +62,37 @@ def home():
     lat = geo_res["results"][0]["latitude"]
     lon = geo_res["results"][0]["longitude"]
 
-    weather_res = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params={
-            "latitude": lat,
-            "longitude": lon,
-            "current_weather": True,
-            "daily": "weathercode,temperature_2m_max,temperature_2m_min",
-            "timezone": "auto"
-        }
+    cache_key = f"{lat},{lon}"
+
+    # Check cache
+    if cache_key in cache:
+        cached_data, timestamp = cache[cache_key]
+        if time() - timestamp < CACHE_DURATION:
+            weather_res = cached_data
+        else:
+            weather_res = None
+    else:
+        weather_res = None
+
+    # If no valid cache → call API
+    if weather_res is None:
+        weather_res = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params={
+                "latitude": lat,
+                "longitude": lon,
+                "current_weather": True,
+                "daily": "weathercode,temperature_2m_max,temperature_2m_min",
+                "timezone": "auto"
+            }
     ).json()
+     
+    # Save to cache
+    cache[cache_key] = (weather_res, time())    
 
     # ✅ FIXED CHECK (correct key)
+    if weather_res.get("error"):
+        return render_template("index.html", error=weather_res.get("reason"))
     current = weather_res.get("current_weather")
 
     if not current:
