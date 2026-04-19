@@ -284,8 +284,13 @@ def home():
         return render_template("index.html", error="API request failed")
 
     # ❌ Error handling
-    if str(weather_res.get("cod")) != "200":
-        return render_template("index.html", error="City not found")
+    if weather_res.get("cod") != 200 and weather_res.get("cod") != "200":
+        print("ERROR:", weather_res)
+        return render_template(
+            "index.html",
+            error=weather_res.get("message", "Weather API error")
+        )
+    
 
     # ✅ Extract data
     temp_c = weather_res["main"]["temp"]
