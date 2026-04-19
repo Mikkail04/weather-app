@@ -1,13 +1,13 @@
-# Added in order to implement expiration
-from time import time
-cache = {}
-CACHE_DURATION = 600  # 10 minutes
-
 from flask import Flask, render_template, request
 import requests
 import os
+from time import time
 
 app = Flask(__name__)
+
+# ---------------- CACHE ----------------
+cache = {}
+CACHE_DURATION = 600  # 10 minutes
 
 
 # ---------------- WEATHER HELPERS ----------------
@@ -51,6 +51,7 @@ def get_weather_icon_and_desc(code):
 def home():
     city = request.args.get("city", "Brooklyn")
 
+    # ---- GEOCODING ----
     geo_res = requests.get(
         "https://geocoding-api.open-meteo.com/v1/search",
         params={"name": city, "count": 1}
@@ -63,43 +64,48 @@ def home():
     lon = geo_res["results"][0]["longitude"]
 
     cache_key = f"{lat},{lon}"
+    weather_res = None
 
-    # Check cache
+    # ---- CHECK CACHE ----
     if cache_key in cache:
         cached_data, timestamp = cache[cache_key]
         if time() - timestamp < CACHE_DURATION:
             weather_res = cached_data
-        else:
-            weather_res = None
-    else:
-        weather_res = None
 
-    # If no valid cache → call API
+    # ---- FETCH FROM API IF NEEDED ----
     if weather_res is None:
-        weather_res = requests.get(
-            "https://api.open-meteo.com/v1/forecast",
-            params={
-                "latitude": lat,
-                "longitude": lon,
-                "current_weather": True,
-                "daily": "weathercode,temperature_2m_max,temperature_2m_min",
-                "timezone": "auto"
-            }
-    ).json()
-     
-    # Save to cache
-    cache[cache_key] = (weather_res, time())    
+        try:
+            weather_res = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "current_weather": True,
+                    "daily": "weathercode,temperature_2m_max,temperature_2m_min",
+                    "timezone": "auto"
+                },
+                timeout=5
+            ).json()
 
-    # ✅ FIXED CHECK (correct key)
-    if weather_res.get("error"):
-        return render_template("index.html", error=weather_res.get("reason"))
+            # Save only valid data
+            if not weather_res.get("error"):
+                cache[cache_key] = (weather_res, time())
+
+        except:
+            weather_res = None
+
+    # ---- FALLBACK IF API FAILS ----
+    if not weather_res or weather_res.get("error"):
+        if cache_key in cache:
+            weather_res, _ = cache[cache_key]
+        else:
+            return render_template("index.html", error="Weather API unavailable")
+
+    # ---- CURRENT WEATHER ----
     current = weather_res.get("current_weather")
-
     if not current:
-        print(weather_res)  # debugging
-        return render_template("index.html", error="Weather data unavailable")
+        return render_template("index.html", error="Weather data missing")
 
-    # ---------------- CURRENT WEATHER ----------------
     temp_c = current["temperature"]
     wind = current["windspeed"]
     weathercode = current.get("weathercode", 0)
@@ -107,7 +113,7 @@ def home():
     icon, description = get_weather_icon_and_desc(weathercode)
     temp_f = (temp_c * 9/5) + 32
 
-    # ---------------- FORECAST ----------------
+    # ---- FORECAST ----
     forecast = []
     if "daily" in weather_res:
         days = weather_res["daily"]["time"]
@@ -129,6 +135,93 @@ def home():
     return render_template(
         "index.html",
         city=city,
+        temp_c=temp_c,
+        temp_f=round(temp_f, 1),
+        wind=wind,
+        icon=icon,
+        description=description,
+        forecast=forecast
+    )
+
+
+# ---------------- COORDS ----------------
+@app.route("/coords")
+def coords():
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+
+    if not lat or not lon:
+        return render_template("index.html", error="Location not available")
+
+    cache_key = f"{lat},{lon}"
+    weather_res = None
+
+    # ---- CACHE ----
+    if cache_key in cache:
+        cached_data, timestamp = cache[cache_key]
+        if time() - timestamp < CACHE_DURATION:
+            weather_res = cached_data
+
+    # ---- API ----
+    if weather_res is None:
+        try:
+            weather_res = requests.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "current_weather": True,
+                    "daily": "weathercode,temperature_2m_max,temperature_2m_min",
+                    "timezone": "auto"
+                },
+                timeout=5
+            ).json()
+
+            if not weather_res.get("error"):
+                cache[cache_key] = (weather_res, time())
+
+        except:
+            weather_res = None
+
+    # ---- FALLBACK ----
+    if not weather_res or weather_res.get("error"):
+        if cache_key in cache:
+            weather_res, _ = cache[cache_key]
+        else:
+            return render_template("index.html", error="Weather API unavailable")
+
+    current = weather_res.get("current_weather")
+    if not current:
+        return render_template("index.html", error="Weather data missing")
+
+    temp_c = current["temperature"]
+    wind = current["windspeed"]
+    weathercode = current.get("weathercode", 0)
+
+    icon, description = get_weather_icon_and_desc(weathercode)
+    temp_f = (temp_c * 9/5) + 32
+
+    forecast = []
+    if "daily" in weather_res:
+        days = weather_res["daily"]["time"]
+        max_t = weather_res["daily"]["temperature_2m_max"]
+        min_t = weather_res["daily"]["temperature_2m_min"]
+        codes = weather_res["daily"]["weathercode"]
+
+        for i in range(len(days)):
+            icon_f, desc_f = get_weather_icon_and_desc(codes[i])
+
+            forecast.append({
+                "date": days[i],
+                "icon": icon_f,
+                "desc": desc_f,
+                "max": round((max_t[i] * 9/5) + 32, 1),
+                "min": round((min_t[i] * 9/5) + 32, 1)
+            })
+
+    return render_template(
+        "index.html",
+        city="Your Location",
         temp_c=temp_c,
         temp_f=round(temp_f, 1),
         wind=wind,
