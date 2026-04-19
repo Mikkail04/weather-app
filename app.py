@@ -99,7 +99,17 @@ def home():
         if cache_key in cache:
             weather_res, _ = cache[cache_key]
         else:
-            return render_template("index.html", error="Weather API unavailable")
+            # 👇 HARD FALLBACK (always works)
+            return render_template(
+                "index.html",
+                city=city,
+                temp_c=20,
+                temp_f=68,
+                wind=5,
+                icon="🌤",
+                description="Demo weather (API limit reached)",
+                forecast=[]
+            )
 
     # ---- CURRENT WEATHER ----
     current = weather_res.get("current_weather")
@@ -188,7 +198,16 @@ def coords():
         if cache_key in cache:
             weather_res, _ = cache[cache_key]
         else:
-            return render_template("index.html", error="Weather API unavailable")
+            return render_template(
+                "index.html",
+                city="Your Location",
+                temp_c=20,
+                temp_f=68,
+                wind=5,
+                icon="🌤",
+                description="Demo weather (API limit reached)",
+                forecast=[]
+            )
 
     current = weather_res.get("current_weather")
     if not current:
