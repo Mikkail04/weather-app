@@ -271,6 +271,7 @@ def home():
     city = request.args.get("city", "New York")
 
     try:
+        # -------- CURRENT WEATHER --------
         weather_res = requests.get(
             "https://api.openweathermap.org/data/2.5/weather",
             params={
@@ -280,30 +281,63 @@ def home():
             },
             timeout=5
         ).json()
+
+        # -------- FORECAST (5-day / 3-hour intervals) --------
+        forecast_res = requests.get(
+            "https://api.openweathermap.org/data/2.5/forecast",
+            params={
+                "q": city,
+                "appid": API_KEY,
+                "units": "metric"
+            },
+            timeout=5
+        ).json()
+
     except:
         return render_template("index.html", error="API request failed")
 
-    # ❌ Error handling
-    if weather_res.get("cod") != 200 and weather_res.get("cod") != "200":
+    # -------- ERROR HANDLING --------
+    if str(weather_res.get("cod")) != "200":
         print("ERROR:", weather_res)
         return render_template(
             "index.html",
             error=weather_res.get("message", "Weather API error")
         )
-    
 
-    # ✅ Extract data
+    # -------- CURRENT WEATHER --------
     temp_c = weather_res["main"]["temp"]
     wind = weather_res["wind"]["speed"]
     description = weather_res["weather"][0]["description"]
     icon_code = weather_res["weather"][0]["icon"]
 
-    # Convert to Fahrenheit
     temp_f = (temp_c * 9/5) + 32
-
-    # OpenWeather icon
     icon_url = f"http://openweathermap.org/img/wn/{icon_code}@2x.png"
 
+    # -------- FORECAST PROCESSING --------
+    forecast = []
+
+    if forecast_res.get("cod") == "200":
+        seen_dates = set()
+
+        for item in forecast_res["list"]:
+            date = item["dt_txt"].split(" ")[0]
+
+            # Only take one entry per day (around noon)
+            if "12:00:00" in item["dt_txt"] and date not in seen_dates:
+                seen_dates.add(date)
+
+                temp_max = item["main"]["temp_max"]
+                temp_min = item["main"]["temp_min"]
+
+                forecast.append({
+                    "date": date,
+                    "icon": item["weather"][0]["icon"],
+                    "desc": item["weather"][0]["description"].title(),
+                    "max": round((temp_max * 9/5) + 32, 1),
+                    "min": round((temp_min * 9/5) + 32, 1)
+                })
+
+    # -------- RENDER --------
     return render_template(
         "index.html",
         city=city,
@@ -311,7 +345,8 @@ def home():
         temp_f=round(temp_f, 1),
         wind=wind,
         description=description.title(),
-        icon_url=icon_url
+        icon_url=icon_url,
+        forecast=forecast   # ✅ THIS was missing before
     )
 
 

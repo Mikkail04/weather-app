@@ -31,12 +31,12 @@
         <p>{{ error }}</p>
     {% else %}
         <h2>{{ city }}</h2>
-        <h2>{{ icon }}</h2>
+        <img src="{{ icon_url }}" alt="weather icon">
         <p>{{ description }}</p>
         <h3>{{ temp_f }}°F / {{ temp_c }}°C</h3>
         <p>Wind: {{ wind }} km/h</p>
 
-        <h2>7-Day Forecast</h2>
+        <h2>5-Day Forecast</h2>
 
         <div class="forecast-container">
             {% for day in forecast %}
