@@ -257,6 +257,7 @@
 from flask import Flask, render_template, request
 import requests
 import os
+from datetime import datetime 
 
 app = Flask(__name__)
 
@@ -320,7 +321,9 @@ def home():
         seen_dates = set()
 
         for item in forecast_res["list"]:
-            date = item["dt_txt"].split(" ")[0]
+            raw_date = item["dt_txt"].split(" ")[0]
+            date_obj = datetime.strptime(raw_date, "%Y-%m-%d")
+            date = date_obj.strftime("%a")
 
             # Only take one entry per day (around noon)
             if "12:00:00" in item["dt_txt"] and date not in seen_dates:
