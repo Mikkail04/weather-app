@@ -382,7 +382,7 @@ def coords():
     icon_code = weather_res["weather"][0]["icon"]
 
     temp_f = (temp_c * 9/5) + 32
-    icon_url = f"http://openweathermap.org/img/wn/{icon_code}@2x.png"
+    icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
 
     return render_template(
         "index.html",
