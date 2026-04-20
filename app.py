@@ -311,7 +311,7 @@ def home():
     icon_code = weather_res["weather"][0]["icon"]
 
     temp_f = (temp_c * 9/5) + 32
-    icon_url = f"http://openweathermap.org/img/wn/{icon_code}@2x.png"
+    icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
 
     # -------- FORECAST PROCESSING --------
     forecast = []
@@ -331,7 +331,7 @@ def home():
 
                 forecast.append({
                     "date": date,
-                    "icon_url": f"http://openweathermap.org/img/wn/{item['weather'][0]['icon']}@2x.png",
+                    "icon_url": f"https://openweathermap.org/img/wn/{item['weather'][0]['icon']}@2x.png",
                     "desc": item["weather"][0]["description"].title(),
                     "max": round((temp_max * 9/5) + 32, 1),
                     "min": round((temp_min * 9/5) + 32, 1)
