@@ -42,7 +42,7 @@
             {% for day in forecast %}
                 <div class="forecast-card">
                     <p class="forecast-date">{{ day.date }}</p>
-                    <h2 class="forecast-icon">{{ day.icon }}</h2>
+                    <img class="forecast-icon" src="{{ day.icon_url }}" alt="icon">
                     <p class="forecast-desc">{{ day.desc }}</p>
                     <p class="forecast-temps"> {{ day.min }}F° / {{ day.max }}F° </p>
                 </div>

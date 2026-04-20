@@ -331,7 +331,7 @@ def home():
 
                 forecast.append({
                     "date": date,
-                    "icon": item["weather"][0]["icon"],
+                    "icon_url": f"http://openweathermap.org/img/wn/{item['weather'][0]['icon']}@2x.png",
                     "desc": item["weather"][0]["description"].title(),
                     "max": round((temp_max * 9/5) + 32, 1),
                     "min": round((temp_min * 9/5) + 32, 1)
