@@ -10,20 +10,20 @@ API_KEY = os.environ.get("API_KEY")
 print("API KEY LOADED:", bool(API_KEY))
 
 
-# ---------------- HOME ----------------
+# HOME
 @app.route("/")
 def home():
     city = request.args.get("city", "New York")
 
     try:
-        # -------- CURRENT WEATHER --------
+        # CURRENT WEATHER
         weather_res = requests.get(
             "https://api.openweathermap.org/data/2.5/weather",
             params={"q": city, "appid": API_KEY, "units": "metric"},
             timeout=5,
         ).json()
 
-        # -------- FORECAST (5-day / 3-hour intervals) --------
+        # FORECAST (5-day / 3-hour intervals)
         forecast_res = requests.get(
             "https://api.openweathermap.org/data/2.5/forecast",
             params={"q": city, "appid": API_KEY, "units": "metric"},
@@ -33,14 +33,14 @@ def home():
     except:
         return render_template("index.html", error="API request failed")
 
-    # -------- ERROR HANDLING --------
+    # ERROR HANDLING
     if str(weather_res.get("cod")) != "200":
         print("ERROR:", weather_res)
         return render_template(
             "index.html", error=weather_res.get("message", "Weather API error")
         )
 
-    # -------- CURRENT WEATHER --------
+    # CURRENT WEATHER
     temp_c = weather_res["main"]["temp"]
     wind = weather_res["wind"]["speed"]
     description = weather_res["weather"][0]["description"]
@@ -49,7 +49,7 @@ def home():
     temp_f = (temp_c * 9 / 5) + 32
     icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
 
-    # -------- FORECAST PROCESSING --------
+    # FORECAST PROCESSING
     forecast = []
 
     if forecast_res.get("cod") == "200":
@@ -77,7 +77,7 @@ def home():
                     }
                 )
 
-    # -------- RENDER --------
+    # RENDER
     return render_template(
         "index.html",
         city=city,
@@ -86,11 +86,11 @@ def home():
         wind=wind,
         description=description.title(),
         icon_url=icon_url,
-        forecast=forecast,  # ✅ THIS was missing before
+        forecast=forecast,
     )
 
 
-# ---------------- COORDS ----------------
+# COORDS
 @app.route("/coords")
 def coords():
     lat = request.args.get("lat", type=float)
@@ -130,6 +130,6 @@ def coords():
     )
 
 
-# ---------------- RUN ----------------
+# RUN
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
