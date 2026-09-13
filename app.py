@@ -96,7 +96,7 @@ def coords():
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
 
-    if not lat or not lon:
+    if lat is None or lon is None:
         return render_template("index.html", error="Location not available")
 
     try:
@@ -108,7 +108,8 @@ def coords():
     except:
         return render_template("index.html", error="API request failed")
 
-    if weather_res.get("cod") != 200:
+    if str(weather_res.get("cod")) != "200":
+        print("Coords error:", weather_res)
         return render_template("index.html", error="Weather unavailable")
 
     temp_c = weather_res["main"]["temp"]
@@ -118,15 +119,17 @@ def coords():
 
     temp_f = (temp_c * 9 / 5) + 32
     icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
+    city = weather_res["name"]
 
     return render_template(
         "index.html",
-        city="Your Location",
+        city=city,
         temp_c=temp_c,
         temp_f=round(temp_f, 1),
         wind=wind,
         description=description.title(),
         icon_url=icon_url,
+        forecast=[],
     )
 
 
