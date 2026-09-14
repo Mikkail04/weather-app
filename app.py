@@ -52,7 +52,7 @@ def home():
     # FORECAST PROCESSING
     forecast = []
 
-    if forecast_res.get("cod") == "200":
+    if str(forecast_res.get("cod")) == "200":
         seen_dates = set()
 
         for item in forecast_res["list"]:
@@ -105,6 +105,17 @@ def coords():
             params={"lat": lat, "lon": lon, "appid": API_KEY, "units": "metric"},
             timeout=5,
         ).json()
+
+        forecast_res = requests.get(
+            "https://api.openweathermap.org/data/2.5/forecast",
+            params={
+                "lat": lat,
+                "lon": lon,
+                "appid": API_KEY,
+                "units": "metric",
+            },
+            timeout=5,
+        ).json()
     except:
         return render_template("index.html", error="API request failed")
 
@@ -121,6 +132,34 @@ def coords():
     icon_url = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
     city = weather_res["name"]
 
+    # FORECAST PROCESSING
+    forecast = []
+
+    if str(forecast_res.get("cod")) == "200":
+        seen_dates = set()
+
+        for item in forecast_res["list"]:
+            raw_date = item["dt_txt"].split(" ")[0]
+            date_obj = datetime.strptime(raw_date, "%Y-%m-%d")
+            date = date_obj.strftime("%a")
+
+            # Only take one entry per day (around noon)
+            if "12:00:00" in item["dt_txt"] and date not in seen_dates:
+                seen_dates.add(date)
+
+                temp_max = item["main"]["temp_max"]
+                temp_min = item["main"]["temp_min"]
+
+                forecast.append(
+                    {
+                        "date": date,
+                        "icon_url": f"https://openweathermap.org/img/wn/{item['weather'][0]['icon']}@2x.png",
+                        "desc": item["weather"][0]["description"].title(),
+                        "max": round((temp_max * 9 / 5) + 32, 1),
+                        "min": round((temp_min * 9 / 5) + 32, 1),
+                    }
+                )
+
     return render_template(
         "index.html",
         city=city,
@@ -129,7 +168,7 @@ def coords():
         wind=wind,
         description=description.title(),
         icon_url=icon_url,
-        forecast=[],
+        forecast=forecast,
     )
 
 
